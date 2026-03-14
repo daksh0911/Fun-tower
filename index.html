@@ -1,0 +1,735 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun Tower - Premium Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: linear-gradient(180deg, #62a3c9 0%, #467b9f 100%);
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+        }
+
+        /* --- 🎮 MENUS 🎮 --- */
+        #start-menu, #difficulty-menu, #game-over-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(12px);
+            z-index: 100; transition: opacity 0.5s;
+        }
+
+        #start-menu { background: rgba(70, 123, 159, 0.7); }
+        #difficulty-menu { background: rgba(46, 75, 95, 0.85); display: none; opacity: 0; }
+        #game-over-menu { background: rgba(180, 40, 40, 0.9); display: none; opacity: 0; }
+
+        .menu-title {
+            font-size: 60px; font-weight: 900; color: white;
+            letter-spacing: 8px; margin-bottom: 20px;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        #player-name {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white; padding: 15px 30px;
+            font-size: 20px; font-weight: 700; border-radius: 40px;
+            text-align: center; font-family: 'Montserrat', sans-serif;
+            margin-bottom: 30px; outline: none; width: 320px;
+            transition: all 0.3s;
+        }
+
+        #leaderboard {
+            margin-top: 30px; background: rgba(0, 0, 0, 0.2);
+            padding: 20px; border-radius: 20px; width: 90%; max-width: 350px;
+            max-height: 250px; overflow-y: auto; color: white;
+        }
+
+        .btn-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.1); border: 3px solid white; color: white;
+            padding: 15px 35px; font-size: 18px; font-weight: 800;
+            border-radius: 50px; cursor: pointer; transition: all 0.3s;
+            font-family: 'Montserrat', sans-serif; letter-spacing: 2px;
+        }
+        .menu-btn:hover { background: white; color: #333; transform: scale(1.05); }
+
+        .btn-easy { border-color: #00ff88; color: #00ff88; }
+        .btn-medium { border-color: #ffcc00; color: #ffcc00; }
+        .btn-hard { border-color: #ff4444; color: #ff4444; }
+
+        /* --- 📊 IN-GAME UI 📊 --- */
+        #ui-layer { 
+            position: absolute; top: 8vh; width: 100%; 
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center; color: #ffffff; pointer-events: none; z-index: 10;
+            opacity: 0; transition: opacity 0.5s; 
+        }
+        #score { font-size: 110px; font-weight: 200; letter-spacing: 5px; margin-bottom: 5px; }
+
+        #compliment-layer {
+            position: absolute; right: 5vw; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+            pointer-events: none; z-index: 15;
+        }
+        #compliment {
+            color: #ffffff; font-size: 45px; font-weight: 900; font-style: italic;
+            letter-spacing: 3px; text-shadow: 0 5px 20px rgba(0,0,0,0.4); text-transform: uppercase;
+            opacity: 0; transform: scale(0.2) rotate(-20deg);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #compliment.show { opacity: 1; transform: scale(1) rotate(-5deg); }
+    </style>
+</head>
+<body>
+    <div id="start-menu">
+        <div class="menu-title">FUN TOWER</div>
+        <input type="text" id="player-name" placeholder="YOUR NAME" maxlength="12" autocomplete="off">
+        <div class="btn-container">
+            <button class="menu-btn" id="play-btn">START GAME</button>
+            <button class="menu-btn" id="shape-btn">CUBE</button>
+        </div>
+        <div id="leaderboard"></div>
+    </div>
+
+    <div id="difficulty-menu">
+        <div class="menu-title">DIFFICULTY</div>
+        <div class="btn-container">
+            <button class="menu-btn btn-easy" onclick="startGame('easy')">EASY</button>
+            <button class="menu-btn btn-medium" onclick="startGame('medium')">MEDIUM</button>
+            <button class="menu-btn btn-hard" onclick="startGame('hard')">HARD</button>
+        </div>
+    </div>
+
+    <div id="game-over-menu">
+        <div class="menu-title">GAME OVER</div>
+        <div id="final-score-display" style="color:white; font-size:28px; font-weight:700; margin-bottom:40px;">Score: 0</div>
+        <div class="btn-container">
+            <button class="menu-btn" id="restart-btn">RETRY</button>
+            <button class="menu-btn" id="main-menu-btn">MENU</button>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="score">0</div>
+        <div style="font-size: 14px; letter-spacing: 4px; opacity: 0.7;">SPACE OR CLICK TO DROP</div>
+    </div>
+
+    <div id="compliment-layer">
+        <div id="compliment">PERFECT!</div>
+    </div>
+
+    <script>
+        const config = {
+            easy: { start: 0.07, growth: 0.002 },
+            medium: { start: 0.14, growth: 0.005 },
+            hard: { start: 0.22, growth: 0.008 }
+        };
+
+        const scene = new THREE.Scene();
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 10;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 100);
+        camera.position.set(10, 10, 10);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight.position.set(10, 20, 5);
+        scene.add(dirLight);
+
+        let stack = [], overhangs = [], pulseRings = [];
+        const boxHeight = 1, originalBoxSize = 6;
+        let gameState = "MENU", streakCount = 0, currentPlayerName = "Guest";
+        let baseSpeed = 0.1, speedMultiplier = 1;
+        let moveDir = 1;
+
+        const shapes = ['cube', 'cylinder', 'hexagon', 'star'];
+        let currentShapeIndex = 0;
+
+        function saveScore(score) {
+            if(score <= 0) return;
+            let s = JSON.parse(localStorage.getItem('funTowerScores')) || [];
+            s.push({ name: currentPlayerName, score: score });
+            s.sort((a,b) => b.score - a.score);
+            localStorage.setItem('funTowerScores', JSON.stringify(s.slice(0, 10)));
+        }
+
+        function updateLeaderboardUI() {
+            const lb = document.getElementById('leaderboard');
+            let s = JSON.parse(localStorage.getItem('funTowerScores')) || [];
+            if(s.length === 0) { lb.innerHTML = "<div style='text-align:center; opacity:0.5;'>NO HIGH SCORES YET</div>"; return; }
+            lb.innerHTML = "<div style='font-weight:900; margin-bottom:15px; text-align:center;'>LEADERBOARD</div>" + 
+                s.map((e, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;"><span>${i+1}. ${e.name}</span><span>${e.score}</span></div>`).join('');
+        }
+
+        function getGeometry(w, d) {
+            const r = Math.min(w, d) / 2;
+            const s = shapes[currentShapeIndex];
+            if(s === 'cylinder') return new THREE.CylinderGeometry(r, r, boxHeight, 32);
+            if(s === 'hexagon') return new THREE.CylinderGeometry(r, r, boxHeight, 6);
+            if(s === 'star') {
+                const shape = new THREE.Shape();
+                for(let i=0; i<10; i++) {
+                    const radius = (i%2===0) ? r : r*0.5;
+                    const a = (i/10)*Math.PI*2 + (Math.PI/2);
+                    if(i===0) shape.moveTo(Math.cos(a)*radius, Math.sin(a)*radius);
+                    else shape.lineTo(Math.cos(a)*radius, Math.sin(a)*radius);
+                }
+                const geom = new THREE.ExtrudeGeometry(shape, { depth: boxHeight, bevelEnabled: false });
+                geom.center(); geom.rotateX(Math.PI/2); return geom;
+            }
+            return new THREE.BoxGeometry(w, boxHeight, d);
+        }
+
+        function initGame() {
+            stack.forEach(b => scene.remove(b.mesh));
+            overhangs.forEach(o => scene.remove(o));
+            pulseRings.forEach(r => scene.remove(r));
+            stack = []; overhangs = []; streakCount = 0; pulseRings = [];
+            camera.position.set(10, 10, 10); camera.lookAt(0, 0, 0);
+            document.getElementById('score').innerText = "0";
+            addLayer(0, 0, originalBoxSize, originalBoxSize, 'x');
+            addLayer(-10, 0, originalBoxSize, originalBoxSize, 'x');
+        }
+
+        function addLayer(x, z, width, depth, direction) {
+            const y = stack.length * boxHeight;
+            const geo = getGeometry(width, depth);
+            const hue = (190 + (Math.floor(stack.length/7)*25)) % 360;
+            const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(`hsl(${hue}, 80%, 55%)`) });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            stack.push({ mesh, width, depth, direction });
+            camera.position.y += boxHeight; camera.lookAt(0, camera.position.y - 10, 0);
+        }
+
+        // --- ✨ BORDER EFFECT LOGIC ✨ ---
+        function createPulseRing(targetMesh) {
+            const edges = new THREE.EdgesGeometry(targetMesh.geometry);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
+            const pulse = new THREE.LineSegments(edges, lineMat);
+            pulse.position.copy(targetMesh.position);
+            scene.add(pulse);
+            pulseRings.push(pulse);
+        }
+
+        function triggerDrop() {
+            if(gameState === "PLAYING") dropBlock();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space') {
+                if(document.activeElement.id !== 'player-name') {
+                    e.preventDefault();
+                    triggerDrop();
+                }
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== "BUTTON" && e.target.tagName !== "INPUT") triggerDrop();
+        });
+
+        document.getElementById('play-btn').addEventListener('click', () => {
+            currentPlayerName = document.getElementById('player-name').value.trim() || "Player";
+            document.getElementById('start-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('start-menu').style.display = "none";
+                document.getElementById('difficulty-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('difficulty-menu').style.opacity = 1, 50);
+            }, 500);
+        });
+
+        function startGame(mode) {
+            baseSpeed = config[mode].start;
+            speedMultiplier = config[mode].growth;
+            document.getElementById('difficulty-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('difficulty-menu').style.display = "none";
+                document.getElementById('ui-layer').style.opacity = 1;
+                initGame(); gameState = "PLAYING";
+            }, 500);
+        }
+
+        function dropBlock() {
+            const top = stack[stack.length - 1];
+            const prev = stack[stack.length - 2];
+            let dir = top.direction;
+            let size = dir === 'x' ? top.width : top.depth;
+            let delta = top.mesh.position[dir] - prev.mesh.position[dir];
+            let overhang = Math.abs(delta);
+            let overlap = size - overhang;
+
+            if(overlap > 0) {
+                let isPerfect = overhang < 0.25;
+                if(isPerfect) {
+                    streakCount++;
+                    top.mesh.position[dir] = prev.mesh.position[dir];
+                    
+                    // Trigger border effect on perfect placement
+                    createPulseRing(top.mesh);
+
+                    if(streakCount >= 2) {
+                        const el = document.getElementById('compliment');
+                        el.classList.add('show');
+                        setTimeout(() => el.classList.remove('show'), 800);
+                    }
+                } else {
+                    streakCount = 0;
+                    let nw = dir === 'x' ? overlap : top.width;
+                    let nd = dir === 'z' ? overlap : top.depth;
+                    top.mesh.geometry = getGeometry(nw, nd);
+                    top.mesh.position[dir] = prev.mesh.position[dir] + (delta/2);
+                    top.width = nw; top.depth = nd;
+                }
+                document.getElementById('score').innerText = stack.length - 1;
+                const next = dir === 'x' ? 'z' : 'x';
+                addLayer(next === 'x' ? -10 : top.mesh.position.x, next === 'z' ? -10 : top.mesh.position.z, top.width, top.depth, next);
+            } else {
+                gameState = "ENDED";
+                saveScore(stack.length - 1);
+                document.getElementById('ui-layer').style.opacity = 0;
+                document.getElementById('final-score-display').innerText = `SCORE: ${stack.length - 1}`;
+                document.getElementById('game-over-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('game-over-menu').style.opacity = 1, 50);
+            }
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('game-over-menu').style.display = "none";
+                document.getElementById('difficulty-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('difficulty-menu').style.opacity = 1, 50);
+            }, 500);
+        });
+
+        document.getElementById('main-menu-btn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        document.getElementById('shape-btn').addEventListener('click', () => {
+            currentShapeIndex = (currentShapeIndex + 1) % shapes.length;
+            document.getElementById('shape-btn').innerText = shapes[currentShapeIndex].toUpperCase();
+            initGame();
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(gameState === "PLAYING") {
+                const top = stack[stack.length - 1];
+                let speedFactor = baseSpeed + (stack.length * speedMultiplier);
+                top.mesh.position[top.direction] += (speedFactor * moveDir);
+                if(top.mesh.position[top.direction] > 10) moveDir = -1;
+                if(top.mesh.position[top.direction] < -10) moveDir = 1;
+            }
+
+            // Animate falling debris
+            overhangs.forEach(o => o.position.y -= 0.3);
+
+            // ✨ Animate pulse rings (Border Effect) ✨
+            for (let i = pulseRings.length - 1; i >= 0; i--) {
+                let ring = pulseRings[i];
+                ring.scale.x += 0.05;
+                ring.scale.z += 0.05;
+                ring.material.opacity -= 0.05;
+                if (ring.material.opacity <= 0) {
+                    scene.remove(ring);
+                    pulseRings.splice(i, 1);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        updateLeaderboardUI();
+        initGame();
+        animate();
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fun Tower - Premium Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: linear-gradient(180deg, #62a3c9 0%, #467b9f 100%);
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+        }
+
+        /* --- 🎮 MENUS 🎮 --- */
+        #start-menu, #difficulty-menu, #game-over-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(12px);
+            z-index: 100; transition: opacity 0.5s;
+        }
+
+        #start-menu { background: rgba(70, 123, 159, 0.7); }
+        #difficulty-menu { background: rgba(46, 75, 95, 0.85); display: none; opacity: 0; }
+        #game-over-menu { background: rgba(180, 40, 40, 0.9); display: none; opacity: 0; }
+
+        .menu-title {
+            font-size: 60px; font-weight: 900; color: white;
+            letter-spacing: 8px; margin-bottom: 20px;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        #player-name {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white; padding: 15px 30px;
+            font-size: 20px; font-weight: 700; border-radius: 40px;
+            text-align: center; font-family: 'Montserrat', sans-serif;
+            margin-bottom: 30px; outline: none; width: 320px;
+            transition: all 0.3s;
+        }
+
+        #leaderboard {
+            margin-top: 20px; background: rgba(0, 0, 0, 0.2);
+            padding: 20px; border-radius: 20px; width: 90%; max-width: 350px;
+            max-height: 250px; overflow-y: auto; color: white;
+        }
+
+        .btn-container { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.1); border: 2px solid white; color: white;
+            padding: 12px 25px; font-size: 14px; font-weight: 800;
+            border-radius: 50px; cursor: pointer; transition: all 0.3s;
+            font-family: 'Montserrat', sans-serif; letter-spacing: 2px;
+        }
+        .menu-btn:hover { background: white; color: #333; transform: scale(1.05); }
+
+        /* Style for the Clear Button */
+        .btn-clear { border-color: rgba(255, 255, 255, 0.3); opacity: 0.7; font-size: 10px; }
+        .btn-clear:hover { background: #ff4444; border-color: #ff4444; color: white; opacity: 1; }
+
+        .btn-easy { border-color: #00ff88; color: #00ff88; }
+        .btn-medium { border-color: #ffcc00; color: #ffcc00; }
+        .btn-hard { border-color: #ff4444; color: #ff4444; }
+
+        /* --- 📊 IN-GAME UI 📊 --- */
+        #ui-layer { 
+            position: absolute; top: 8vh; width: 100%; 
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center; color: #ffffff; pointer-events: none; z-index: 10;
+            opacity: 0; transition: opacity 0.5s; 
+        }
+        #score { font-size: 110px; font-weight: 200; letter-spacing: 5px; margin-bottom: 5px; }
+
+        #compliment-layer {
+            position: absolute; right: 5vw; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+            pointer-events: none; z-index: 15;
+        }
+        #compliment {
+            color: #ffffff; font-size: 45px; font-weight: 900; font-style: italic;
+            letter-spacing: 3px; text-shadow: 0 5px 20px rgba(0,0,0,0.4); text-transform: uppercase;
+            opacity: 0; transform: scale(0.2) rotate(-20deg);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #compliment.show { opacity: 1; transform: scale(1) rotate(-5deg); }
+    </style>
+</head>
+<body>
+    <div id="start-menu">
+        <div class="menu-title">FUN TOWER</div>
+        <input type="text" id="player-name" placeholder="YOUR NAME" maxlength="12" autocomplete="off">
+        <div class="btn-container">
+            <button class="menu-btn" id="play-btn">START GAME</button>
+            <button class="menu-btn" id="shape-btn">CUBE</button>
+        </div>
+        
+        <div id="leaderboard"></div>
+        
+        <div class="btn-container">
+            <button class="menu-btn btn-clear" id="clear-data-btn">RESET LEADERBOARD</button>
+        </div>
+    </div>
+
+    <div id="difficulty-menu">
+        <div class="menu-title">DIFFICULTY</div>
+        <div class="btn-container">
+            <button class="menu-btn btn-easy" onclick="startGame('easy')">EASY</button>
+            <button class="menu-btn btn-medium" onclick="startGame('medium')">MEDIUM</button>
+            <button class="menu-btn btn-hard" onclick="startGame('hard')">HARD</button>
+        </div>
+    </div>
+
+    <div id="game-over-menu">
+        <div class="menu-title">GAME OVER</div>
+        <div id="final-score-display" style="color:white; font-size:28px; font-weight:700; margin-bottom:40px;">Score: 0</div>
+        <div class="btn-container">
+            <button class="menu-btn" id="restart-btn">RETRY</button>
+            <button class="menu-btn" id="main-menu-btn">MENU</button>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div id="score">0</div>
+        <div style="font-size: 14px; letter-spacing: 4px; opacity: 0.7;">SPACE OR CLICK TO DROP</div>
+    </div>
+
+    <div id="compliment-layer">
+        <div id="compliment">PERFECT!</div>
+    </div>
+
+    <script>
+        const config = {
+            easy: { start: 0.07, growth: 0.002 },
+            medium: { start: 0.14, growth: 0.005 },
+            hard: { start: 0.22, growth: 0.008 }
+        };
+
+        const scene = new THREE.Scene();
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 10;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 100);
+        camera.position.set(10, 10, 10);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight.position.set(10, 20, 5);
+        scene.add(dirLight);
+
+        let stack = [], overhangs = [], pulseRings = [];
+        const boxHeight = 1, originalBoxSize = 6;
+        let gameState = "MENU", streakCount = 0, currentPlayerName = "Guest";
+        let baseSpeed = 0.1, speedMultiplier = 1;
+        let moveDir = 1;
+
+        const shapes = ['cube', 'cylinder', 'hexagon', 'star'];
+        let currentShapeIndex = 0;
+
+        // --- 💾 DATA STORAGE LOGIC 💾 ---
+        function saveScore(score) {
+            if(score <= 0) return;
+            let s = JSON.parse(localStorage.getItem('funTowerScores')) || [];
+            s.push({ name: currentPlayerName, score: score });
+            s.sort((a,b) => b.score - a.score);
+            localStorage.setItem('funTowerScores', JSON.stringify(s.slice(0, 3)));
+        }
+
+        function updateLeaderboardUI() {
+            const lb = document.getElementById('leaderboard');
+            let s = JSON.parse(localStorage.getItem('funTowerScores')) || [];
+            if(s.length === 0) { lb.innerHTML = "<div style='text-align:center; opacity:0.5;'>LEADERBOARD EMPTY</div>"; return; }
+            lb.innerHTML = "<div style='font-weight:900; margin-bottom:15px; text-align:center;'>ELITE 3</div>" + 
+                s.map((e, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;"><span>${i+1}. ${e.name}</span><span>${e.score}</span></div>`).join('');
+        }
+
+        // --- 🗑️ NEW: RESET BUTTON LOGIC 🗑️ ---
+        document.getElementById('clear-data-btn').addEventListener('click', () => {
+            if(confirm("Are you sure you want to clear the Elite 3 leaderboard?")) {
+                localStorage.removeItem('funTowerScores');
+                updateLeaderboardUI();
+                initGame();
+            }
+        });
+
+        function getGeometry(w, d) {
+            const r = Math.min(w, d) / 2;
+            const s = shapes[currentShapeIndex];
+            if(s === 'cylinder') return new THREE.CylinderGeometry(r, r, boxHeight, 32);
+            if(s === 'hexagon') return new THREE.CylinderGeometry(r, r, boxHeight, 6);
+            if(s === 'star') {
+                const shape = new THREE.Shape();
+                for(let i=0; i<10; i++) {
+                    const radius = (i%2===0) ? r : r*0.5;
+                    const a = (i/10)*Math.PI*2 + (Math.PI/2);
+                    if(i===0) shape.moveTo(Math.cos(a)*radius, Math.sin(a)*radius);
+                    else shape.lineTo(Math.cos(a)*radius, Math.sin(a)*radius);
+                }
+                const geom = new THREE.ExtrudeGeometry(shape, { depth: boxHeight, bevelEnabled: false });
+                geom.center(); geom.rotateX(Math.PI/2); return geom;
+            }
+            return new THREE.BoxGeometry(w, boxHeight, d);
+        }
+
+        function initGame() {
+            stack.forEach(b => scene.remove(b.mesh));
+            overhangs.forEach(o => scene.remove(o));
+            pulseRings.forEach(r => scene.remove(r));
+            stack = []; overhangs = []; pulseRings = []; streakCount = 0;
+            camera.position.set(10, 10, 10); camera.lookAt(0, 0, 0);
+            document.getElementById('score').innerText = "0";
+            addLayer(0, 0, originalBoxSize, originalBoxSize, 'x');
+            addLayer(-10, 0, originalBoxSize, originalBoxSize, 'x');
+        }
+
+        function addLayer(x, z, width, depth, direction) {
+            const y = stack.length * boxHeight;
+            const geo = getGeometry(width, depth);
+            const hue = (190 + (Math.floor(stack.length/7)*25)) % 360;
+            const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(`hsl(${hue}, 80%, 55%)`) });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            stack.push({ mesh, width, depth, direction });
+            camera.position.y += boxHeight; camera.lookAt(0, camera.position.y - 10, 0);
+        }
+
+        function createPulseRing(targetMesh) {
+            const edges = new THREE.EdgesGeometry(targetMesh.geometry);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
+            const pulse = new THREE.LineSegments(edges, lineMat);
+            pulse.position.copy(targetMesh.position);
+            scene.add(pulse);
+            pulseRings.push(pulse);
+        }
+
+        function triggerDrop() {
+            if(gameState === "PLAYING") dropBlock();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space' && document.activeElement.id !== 'player-name') {
+                e.preventDefault(); triggerDrop();
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if(e.target.tagName !== "BUTTON" && e.target.tagName !== "INPUT") triggerDrop();
+        });
+
+        document.getElementById('play-btn').addEventListener('click', () => {
+            currentPlayerName = document.getElementById('player-name').value.trim() || "Player";
+            document.getElementById('start-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('start-menu').style.display = "none";
+                document.getElementById('difficulty-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('difficulty-menu').style.opacity = 1, 50);
+            }, 500);
+        });
+
+        function startGame(mode) {
+            baseSpeed = config[mode].start;
+            speedMultiplier = config[mode].growth;
+            document.getElementById('difficulty-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('difficulty-menu').style.display = "none";
+                document.getElementById('ui-layer').style.opacity = 1;
+                initGame(); gameState = "PLAYING";
+            }, 500);
+        }
+
+        function dropBlock() {
+            const top = stack[stack.length - 1];
+            const prev = stack[stack.length - 2];
+            let dir = top.direction;
+            let size = dir === 'x' ? top.width : top.depth;
+            let delta = top.mesh.position[dir] - prev.mesh.position[dir];
+            let overhang = Math.abs(delta);
+            let overlap = size - overhang;
+
+            if(overlap > 0) {
+                let isPerfect = overhang < 0.25;
+                if(isPerfect) {
+                    streakCount++;
+                    top.mesh.position[dir] = prev.mesh.position[dir];
+                    createPulseRing(top.mesh);
+                    if(streakCount >= 2) {
+                        const el = document.getElementById('compliment');
+                        el.classList.add('show');
+                        setTimeout(() => el.classList.remove('show'), 800);
+                    }
+                } else {
+                    streakCount = 0;
+                    let nw = dir === 'x' ? overlap : top.width;
+                    let nd = dir === 'z' ? overlap : top.depth;
+                    top.mesh.geometry = getGeometry(nw, nd);
+                    top.mesh.position[dir] = prev.mesh.position[dir] + (delta/2);
+                    top.width = nw; top.depth = nd;
+                }
+                document.getElementById('score').innerText = stack.length - 1;
+                const next = dir === 'x' ? 'z' : 'x';
+                addLayer(next === 'x' ? -10 : top.mesh.position.x, next === 'z' ? -10 : top.mesh.position.z, top.width, top.depth, next);
+            } else {
+                gameState = "ENDED";
+                saveScore(stack.length - 1);
+                document.getElementById('ui-layer').style.opacity = 0;
+                document.getElementById('final-score-display').innerText = `SCORE: ${stack.length - 1}`;
+                document.getElementById('game-over-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('game-over-menu').style.opacity = 1, 50);
+            }
+        }
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-menu').style.opacity = 0;
+            setTimeout(() => {
+                document.getElementById('game-over-menu').style.display = "none";
+                document.getElementById('difficulty-menu').style.display = "flex";
+                setTimeout(() => document.getElementById('difficulty-menu').style.opacity = 1, 50);
+            }, 500);
+        });
+
+        document.getElementById('main-menu-btn').addEventListener('click', () => { location.reload(); });
+
+        document.getElementById('shape-btn').addEventListener('click', () => {
+            currentShapeIndex = (currentShapeIndex + 1) % shapes.length;
+            document.getElementById('shape-btn').innerText = shapes[currentShapeIndex].toUpperCase();
+            initGame();
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(gameState === "PLAYING") {
+                const top = stack[stack.length - 1];
+                let speedFactor = baseSpeed + (stack.length * speedMultiplier);
+                top.mesh.position[top.direction] += (speedFactor * moveDir);
+                if(top.mesh.position[top.direction] > 10) moveDir = -1;
+                if(top.mesh.position[top.direction] < -10) moveDir = 1;
+            }
+            overhangs.forEach(o => o.position.y -= 0.3);
+            for (let i = pulseRings.length - 1; i >= 0; i--) {
+                let ring = pulseRings[i];
+                ring.scale.x += 0.05;
+                ring.scale.z += 0.05;
+                ring.material.opacity -= 0.05;
+                if (ring.material.opacity <= 0) {
+                    scene.remove(ring);
+                    pulseRings.splice(i, 1);
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        updateLeaderboardUI();
+        initGame();
+        animate();
+    </script>
+</body>
+</html>
